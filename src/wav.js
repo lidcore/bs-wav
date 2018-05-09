@@ -202,8 +202,11 @@ function read(path) {
                                                             }));
                                               }));
                                         return (function (param) {
-                                            return BsCallback.repeat((function (cb) {
-                                                          return BsCallback.$$return(header[0] !== "data", cb);
+                                            return BsCallback.repeat((function () {
+                                                          var partial_arg = header[0] !== "data";
+                                                          return (function (param) {
+                                                              return BsCallback.$$return(partial_arg, param);
+                                                            });
                                                         }), partial_arg, param);
                                           });
                                       }))
