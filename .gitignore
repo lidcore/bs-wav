@@ -26,11 +26,5 @@
 *.log
 /node_modules/
 .*sw*
-.serverless/
 *.lock
-ithaca.db*
-/__tests__/files/
-packer/komodo.systemd
-packer/komodo,pid
 .env
-*.js
