@@ -54,78 +54,80 @@ let read_string ic n =
     offsetSet ic (offset ic + (int_of_float ret));
     return (Buffer.toString buf)
 
-let check_head ic =
-  seqa [|
-    read_string ic 4 >> (fun ret ->
-      if ret <> "RIFF" then
-        fail (Not_a_wav_file "Bad header: \"RIFF\" expected")
-      else
-        return ());
-
-    discard(read_int ic);
-
-    read_string ic 4 >> (fun ret ->
-      if ret <> "WAVE" then
-        fail (Not_a_wav_file "Bad header: \"WAVE\" expected")
-      else
-        return ());
-
-    read_string ic 4 >> (fun ret ->
-      if ret <> "fmt " then
-        fail (Not_a_wav_file "Bad header: \"fmt \" expected")
-      else
-        return ())
-  |] >> fun () ->
-    read_int ic >> fun fmt_len ->
-      if fmt_len < 0x10 then
-        fail (Not_a_wav_file "Bad header: invalid \"fmt \" length")
-      else
-        return () >> fun () ->
-          read_short ic >> fun ret ->
-            if ret <> 1 then
-             fail (Not_a_wav_file "Bad header: unhandled codec")
-           else
-             return fmt_len
-
 let read path =
+  let check condition reason =
+    if condition then
+      return ()
+    else
+      fail (Not_a_wav_file reason)
+  in
+  let fmt_len      = ref (-1) in
+  let chan_num     = ref (-1) in
+  let samp_hz      = ref (-1) in
+  let byt_per_sec  = ref (-1) in
+  let byt_per_samp = ref (-1) in
+  let bit_per_samp = ref (-1) in
   Fs.openFile path "r" >> fun fd ->
     let ic = input ~fd ~offset:0 in
-    check_head ic >> fun fmt_len ->
-      mapa (fun fn -> fn ic) [|
-        read_short;
-        read_int;
-        read_int;
-        read_short;
-        read_short
-      |] >> fun a ->
-        let chan_num     = a.(0) in
-        let samp_hz      = a.(1) in
-        let byt_per_sec  = a.(2) in
-        let byt_per_samp = a.(3) in
-        let bit_per_samp = a.(4) in
+    seqa [|
+      read_string ic 4 >> (fun ret ->
+        check (ret = "RIFF") "Bad header: \"RIFF\" expected");
 
-        (* The fmt header can be padded *)
-        (if fmt_len > 0x10 then 
-          discard(read_float_num_bytes ic (fmt_len - 0x10))
-        else
-          return ()) >> fun () ->
-            read_string ic 4 >> fun ret ->
-              let header = ref ret in
-              (* Skip unhandled chunks. *)
-              repeat (return (!header <> "data"))
-                     (read_int ic >> fun len ->
-                       discard (read_string ic len) >> fun () ->
-                         read_string ic 4 >> fun ret ->
-                           header := ret;
-                           return ()) >> fun () ->
-                read_int ic >> fun length ->
-                  Fs.close fd >> fun () ->
-                    return [%bs.obj{
-                      channels         = chan_num;
-                      sample_rate      = samp_hz;
-                      bytes_per_second = byt_per_sec;
-                      bytes_per_sample = byt_per_samp;
-                      bits_per_sample  = bit_per_samp;
-                      data_offset      = offset ic;
-                      duration         = (float length) /. (float byt_per_sec)
-                    }]
+      discard(read_int ic);
+
+      read_string ic 4 >> (fun ret ->
+        check (ret = "WAVE") "Bad header: \"WAVE\" expected");
+
+      read_string ic 4 >> (fun ret ->
+        check (ret = "fmt ") "Bad header: \"fmt \" expected");
+
+      read_int ic >> (fun ret ->
+        fmt_len := ret;
+        check (ret >= 0x10) "Bad header: invalid \"fmt \" length");
+
+      read_short ic >> (fun ret ->
+        check (ret = 1) "Bad header: unhandled codec");
+
+      read_short ic >> (fun ret ->
+        chan_num := ret; return ());
+
+      read_int ic >> (fun ret ->
+        samp_hz := ret; return ());
+
+      read_int ic >> (fun ret ->
+        byt_per_sec := ret; return ());
+
+      read_short ic >> (fun ret ->
+        byt_per_samp := ret; return ());
+
+      read_short ic >> (fun ret ->
+        bit_per_samp := ret; return ());
+
+      (* The fmt header can be padded *)
+      if !fmt_len > 0x10 then 
+        discard(read_float_num_bytes ic (!fmt_len - 0x10))
+      else
+        return ();
+
+      read_string ic 4 >> fun ret ->
+        let header = ref ret in
+        (* Skip unhandled chunks. *)
+        repeat (return (!header <> "data"))
+               (read_int ic >> fun len ->
+                 discard (read_string ic len) >> fun () ->
+                   read_string ic 4 >> fun ret ->
+                   header := ret;
+                   return ());
+                   
+    |] >> fun () ->
+      read_int ic >> fun length ->
+        Fs.close fd >> fun () ->
+          return [%bs.obj{
+            channels         = !chan_num;
+            sample_rate      = !samp_hz;
+            bytes_per_second = !byt_per_sec;
+            bytes_per_sample = !byt_per_samp;
+            bits_per_sample  = !bit_per_samp;
+            data_offset      = offset ic;
+            duration         = (float length) /. (float !byt_per_sec)
+          }]

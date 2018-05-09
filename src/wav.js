@@ -2,7 +2,6 @@
 'use strict';
 
 var $$Array = require("bs-platform/lib/js/array.js");
-var Curry = require("bs-platform/lib/js/curry.js");
 var BsCallback = require("bs-callback/src/bsCallback.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var Caml_exceptions = require("bs-platform/lib/js/caml_exceptions.js");
@@ -95,93 +94,28 @@ function read_string(ic, n) {
               }));
 }
 
-function check_head(ic) {
-  var partial_arg = read_int(ic);
-  return BsCallback.$great$great(BsCallback.seqa(/* None */0, /* array */[
-                  BsCallback.$great$great(read_string(ic, 4), (function (ret) {
-                          if (ret !== "RIFF") {
-                            var partial_arg = [
-                              Not_a_wav_file,
-                              "Bad header: \"RIFF\" expected"
-                            ];
-                            return (function (param) {
-                                return BsCallback.fail(partial_arg, param);
-                              });
-                          } else {
-                            return (function (param) {
-                                return BsCallback.$$return(/* () */0, param);
-                              });
-                          }
-                        })),
-                  (function (param) {
-                      return BsCallback.discard(partial_arg, param);
-                    }),
-                  BsCallback.$great$great(read_string(ic, 4), (function (ret) {
-                          if (ret !== "WAVE") {
-                            var partial_arg = [
-                              Not_a_wav_file,
-                              "Bad header: \"WAVE\" expected"
-                            ];
-                            return (function (param) {
-                                return BsCallback.fail(partial_arg, param);
-                              });
-                          } else {
-                            return (function (param) {
-                                return BsCallback.$$return(/* () */0, param);
-                              });
-                          }
-                        })),
-                  BsCallback.$great$great(read_string(ic, 4), (function (ret) {
-                          if (ret !== "fmt ") {
-                            var partial_arg = [
-                              Not_a_wav_file,
-                              "Bad header: \"fmt \" expected"
-                            ];
-                            return (function (param) {
-                                return BsCallback.fail(partial_arg, param);
-                              });
-                          } else {
-                            return (function (param) {
-                                return BsCallback.$$return(/* () */0, param);
-                              });
-                          }
-                        }))
-                ]), (function () {
-                return BsCallback.$great$great(read_int(ic), (function (fmt_len) {
-                              if (fmt_len < 16) {
-                                var partial_arg = [
-                                  Not_a_wav_file,
-                                  "Bad header: invalid \"fmt \" length"
-                                ];
-                                return (function (param) {
-                                    return BsCallback.fail(partial_arg, param);
-                                  });
-                              } else {
-                                return BsCallback.$great$great((function (param) {
-                                              return BsCallback.$$return(/* () */0, param);
-                                            }), (function () {
-                                              return BsCallback.$great$great(read_short(ic), (function (ret) {
-                                                            if (ret !== 1) {
-                                                              var partial_arg = [
-                                                                Not_a_wav_file,
-                                                                "Bad header: unhandled codec"
-                                                              ];
-                                                              return (function (param) {
-                                                                  return BsCallback.fail(partial_arg, param);
-                                                                });
-                                                            } else {
-                                                              return (function (param) {
-                                                                  return BsCallback.$$return(fmt_len, param);
-                                                                });
-                                                            }
-                                                          }));
-                                            }));
-                              }
-                            }));
-              }));
-}
-
 function read(path) {
+  var check = function (condition, reason) {
+    if (condition) {
+      return (function (param) {
+          return BsCallback.$$return(/* () */0, param);
+        });
+    } else {
+      var partial_arg = [
+        Not_a_wav_file,
+        reason
+      ];
+      return (function (param) {
+          return BsCallback.fail(partial_arg, param);
+        });
+    }
+  };
+  var fmt_len = [-1];
+  var chan_num = [-1];
+  var samp_hz = [-1];
+  var byt_per_sec = [-1];
+  var byt_per_samp = [-1];
+  var bit_per_samp = [-1];
   return BsCallback.$great$great((function (param) {
                 return Fs$LidcoreBsNode.openFile(path, "r", param);
               }), (function (fd) {
@@ -189,75 +123,109 @@ function read(path) {
                   fd: fd,
                   offset: 0
                 };
-                return BsCallback.$great$great(check_head(ic), (function (fmt_len) {
-                              return BsCallback.$great$great(BsCallback.mapa(/* None */0, (function (fn) {
-                                                return Curry._1(fn, ic);
-                                              }), /* array */[
-                                              read_short,
-                                              read_int,
-                                              read_int,
-                                              read_short,
-                                              read_short
-                                            ]), (function (a) {
-                                            var chan_num = Caml_array.caml_array_get(a, 0);
-                                            var samp_hz = Caml_array.caml_array_get(a, 1);
-                                            var byt_per_sec = Caml_array.caml_array_get(a, 2);
-                                            var byt_per_samp = Caml_array.caml_array_get(a, 3);
-                                            var bit_per_samp = Caml_array.caml_array_get(a, 4);
-                                            var tmp;
-                                            if (fmt_len > 16) {
-                                              var partial_arg = read_float_num_bytes(ic, fmt_len - 16 | 0);
-                                              tmp = (function (param) {
-                                                  return BsCallback.discard(partial_arg, param);
-                                                });
-                                            } else {
-                                              tmp = (function (param) {
-                                                  return BsCallback.$$return(/* () */0, param);
-                                                });
-                                            }
-                                            return BsCallback.$great$great(tmp, (function () {
-                                                          return BsCallback.$great$great(read_string(ic, 4), (function (ret) {
-                                                                        var header = [ret];
-                                                                        var partial_arg = BsCallback.$great$great(read_int(ic), (function (len) {
-                                                                                var partial_arg = read_string(ic, len);
-                                                                                return BsCallback.$great$great((function (param) {
-                                                                                              return BsCallback.discard(partial_arg, param);
-                                                                                            }), (function () {
-                                                                                              return BsCallback.$great$great(read_string(ic, 4), (function (ret) {
-                                                                                                            header[0] = ret;
-                                                                                                            return (function (param) {
-                                                                                                                return BsCallback.$$return(/* () */0, param);
-                                                                                                              });
-                                                                                                          }));
-                                                                                            }));
-                                                                              }));
-                                                                        var partial_arg$1 = header[0] !== "data";
-                                                                        var partial_arg$2 = function (param) {
-                                                                          return BsCallback.$$return(partial_arg$1, param);
-                                                                        };
-                                                                        return BsCallback.$great$great((function (param) {
-                                                                                      return BsCallback.repeat(partial_arg$2, partial_arg, param);
-                                                                                    }), (function () {
-                                                                                      return BsCallback.$great$great(read_int(ic), (function (length) {
-                                                                                                    return BsCallback.$great$great((function (param) {
-                                                                                                                  return Fs$LidcoreBsNode.close(fd, param);
-                                                                                                                }), (function () {
-                                                                                                                  var partial_arg = {
-                                                                                                                    channels: chan_num,
-                                                                                                                    sample_rate: samp_hz,
-                                                                                                                    bytes_per_second: byt_per_sec,
-                                                                                                                    bytes_per_sample: byt_per_samp,
-                                                                                                                    bits_per_sample: bit_per_samp,
-                                                                                                                    data_offset: ic.offset,
-                                                                                                                    duration: length / byt_per_sec
-                                                                                                                  };
-                                                                                                                  return (function (param) {
-                                                                                                                      return BsCallback.$$return(partial_arg, param);
-                                                                                                                    });
-                                                                                                                }));
-                                                                                                  }));
-                                                                                    }));
-                                                                      }));
+                var partial_arg = read_int(ic);
+                var tmp;
+                if (fmt_len[0] > 16) {
+                  var partial_arg$1 = read_float_num_bytes(ic, fmt_len[0] - 16 | 0);
+                  tmp = (function (param) {
+                      return BsCallback.discard(partial_arg$1, param);
+                    });
+                } else {
+                  tmp = (function (param) {
+                      return BsCallback.$$return(/* () */0, param);
+                    });
+                }
+                return BsCallback.$great$great(BsCallback.seqa(/* None */0, /* array */[
+                                BsCallback.$great$great(read_string(ic, 4), (function (ret) {
+                                        return check(ret === "RIFF", "Bad header: \"RIFF\" expected");
+                                      })),
+                                (function (param) {
+                                    return BsCallback.discard(partial_arg, param);
+                                  }),
+                                BsCallback.$great$great(read_string(ic, 4), (function (ret) {
+                                        return check(ret === "WAVE", "Bad header: \"WAVE\" expected");
+                                      })),
+                                BsCallback.$great$great(read_string(ic, 4), (function (ret) {
+                                        return check(ret === "fmt ", "Bad header: \"fmt \" expected");
+                                      })),
+                                BsCallback.$great$great(read_int(ic), (function (ret) {
+                                        fmt_len[0] = ret;
+                                        return check(ret >= 16, "Bad header: invalid \"fmt \" length");
+                                      })),
+                                BsCallback.$great$great(read_short(ic), (function (ret) {
+                                        return check(ret === 1, "Bad header: unhandled codec");
+                                      })),
+                                BsCallback.$great$great(read_short(ic), (function (ret) {
+                                        chan_num[0] = ret;
+                                        return (function (param) {
+                                            return BsCallback.$$return(/* () */0, param);
+                                          });
+                                      })),
+                                BsCallback.$great$great(read_int(ic), (function (ret) {
+                                        samp_hz[0] = ret;
+                                        return (function (param) {
+                                            return BsCallback.$$return(/* () */0, param);
+                                          });
+                                      })),
+                                BsCallback.$great$great(read_int(ic), (function (ret) {
+                                        byt_per_sec[0] = ret;
+                                        return (function (param) {
+                                            return BsCallback.$$return(/* () */0, param);
+                                          });
+                                      })),
+                                BsCallback.$great$great(read_short(ic), (function (ret) {
+                                        byt_per_samp[0] = ret;
+                                        return (function (param) {
+                                            return BsCallback.$$return(/* () */0, param);
+                                          });
+                                      })),
+                                BsCallback.$great$great(read_short(ic), (function (ret) {
+                                        bit_per_samp[0] = ret;
+                                        return (function (param) {
+                                            return BsCallback.$$return(/* () */0, param);
+                                          });
+                                      })),
+                                tmp,
+                                BsCallback.$great$great(read_string(ic, 4), (function (ret) {
+                                        var header = [ret];
+                                        var partial_arg = BsCallback.$great$great(read_int(ic), (function (len) {
+                                                var partial_arg = read_string(ic, len);
+                                                return BsCallback.$great$great((function (param) {
+                                                              return BsCallback.discard(partial_arg, param);
+                                                            }), (function () {
+                                                              return BsCallback.$great$great(read_string(ic, 4), (function (ret) {
+                                                                            header[0] = ret;
+                                                                            return (function (param) {
+                                                                                return BsCallback.$$return(/* () */0, param);
+                                                                              });
+                                                                          }));
+                                                            }));
+                                              }));
+                                        var partial_arg$1 = header[0] !== "data";
+                                        var partial_arg$2 = function (param) {
+                                          return BsCallback.$$return(partial_arg$1, param);
+                                        };
+                                        return (function (param) {
+                                            return BsCallback.repeat(partial_arg$2, partial_arg, param);
+                                          });
+                                      }))
+                              ]), (function () {
+                              return BsCallback.$great$great(read_int(ic), (function (length) {
+                                            return BsCallback.$great$great((function (param) {
+                                                          return Fs$LidcoreBsNode.close(fd, param);
+                                                        }), (function () {
+                                                          var partial_arg = {
+                                                            channels: chan_num[0],
+                                                            sample_rate: samp_hz[0],
+                                                            bytes_per_second: byt_per_sec[0],
+                                                            bytes_per_sample: byt_per_samp[0],
+                                                            bits_per_sample: bit_per_samp[0],
+                                                            data_offset: ic.offset,
+                                                            duration: length / byt_per_sec[0]
+                                                          };
+                                                          return (function (param) {
+                                                              return BsCallback.$$return(partial_arg, param);
+                                                            });
                                                         }));
                                           }));
                             }));
