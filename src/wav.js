@@ -201,12 +201,10 @@ function read(path) {
                                                                           }));
                                                             }));
                                               }));
-                                        var partial_arg$1 = header[0] !== "data";
-                                        var partial_arg$2 = function (param) {
-                                          return BsCallback.$$return(partial_arg$1, param);
-                                        };
                                         return (function (param) {
-                                            return BsCallback.repeat(partial_arg$2, partial_arg, param);
+                                            return BsCallback.repeat((function (cb) {
+                                                          return BsCallback.$$return(header[0] !== "data", cb);
+                                                        }), partial_arg, param);
                                           });
                                       }))
                               ]), (function () {

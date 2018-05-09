@@ -112,7 +112,7 @@ let read path =
       read_string ic 4 >> fun ret ->
         let header = ref ret in
         (* Skip unhandled chunks. *)
-        repeat (return (!header <> "data"))
+        repeat (fun cb -> return (!header <> "data") cb)
                (read_int ic >> fun len ->
                  discard (read_string ic len) >> fun () ->
                    read_string ic 4 >> fun ret ->
