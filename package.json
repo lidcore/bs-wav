@@ -1,0 +1,21 @@
+{
+  "name": "@lidcore/bs-wav",
+  "version": "0.1.0",
+  "scripts": {
+    "clean": "bsb -clean-world",
+    "build": "bsb -make-world",
+    "watch": "bsb -make-world -w"
+  },
+  "keywords": [
+    "BuckleScript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "bs-platform": "^3.0.0"
+  },
+  "dependencies": {
+    "bs-callback": "^1.3.4",
+    "@lidcore/bs-node": "git+https://github.com/lidcore/bs-node.git"
+  }
+}

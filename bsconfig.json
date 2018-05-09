@@ -1,0 +1,17 @@
+{
+  "name": "@lidcore/bs-wav",
+  "namespace": true,
+  "version": "0.1.0",
+  "sources": [
+    "src"
+  ],
+  "package-specs": {
+    "module": "commonjs",
+    "in-source": true
+  },
+  "suffix": ".js",
+  "bs-dependencies": [
+    "bs-callback",
+    "@lidcore/bs-node"
+  ]
+}
