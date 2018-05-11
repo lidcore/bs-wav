@@ -4,7 +4,7 @@
 var BsCallback = require("bs-callback/src/bsCallback.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var Fs$LidcoreBsNode = require("@lidcore/bs-node/src/fs.js");
-var Wav$LidcoreBsWav = require("./wav.js");
+var Wav$LidcoreBsWav = require("../src/wav.js");
 var Buffer$LidcoreBsNode = require("@lidcore/bs-node/src/buffer.js");
 var Caml_builtin_exceptions = require("bs-platform/lib/js/caml_builtin_exceptions.js");
 

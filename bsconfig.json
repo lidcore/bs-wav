@@ -3,7 +3,7 @@
   "namespace": true,
   "version": "0.1.0",
   "sources": [
-    "src"
+    "src", "examples"
   ],
   "package-specs": {
     "module": "commonjs",

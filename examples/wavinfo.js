@@ -3,7 +3,7 @@
 
 var BsCallback = require("bs-callback/src/bsCallback.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
-var Wav$LidcoreBsWav = require("./wav.js");
+var Wav$LidcoreBsWav = require("../src/wav.js");
 
 var path;
 
