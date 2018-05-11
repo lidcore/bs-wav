@@ -1,7 +1,7 @@
 open BsCallback
 open LidcoreBsNode
 
-type t = <
+type header = <
   channels         : int; (* 1 = mono ; 2 = stereo *)
   sample_rate      : int; (* in Hz *)
   bytes_per_second : int;
@@ -22,7 +22,7 @@ exception Not_a_wav_file of string
 let buf = Buffer.from " "
 
 let input_byte ic =
-  Fs.read (fd ic) buf 0. 1. >> fun (ret,buf) ->
+  Fs.read (fd ic) buf >> fun (ret,buf) ->
     assert (ret = 1.);
     offsetSet ic (offset ic + 1); 
     return (Buffer.get buf 0.)
@@ -49,7 +49,7 @@ let read_short ic =
 let read_string ic n =
   let n = float n in
   let buf = Buffer.alloc n in
-  Fs.read (fd ic) buf 0. n >> fun (ret,buf) ->
+  Fs.read (fd ic) buf >> fun (ret,buf) ->
     assert (ret = n);
     offsetSet ic (offset ic + (int_of_float ret));
     return (Buffer.toString buf)
@@ -113,11 +113,12 @@ let read path =
         let header = ref ret in
         (* Skip unhandled chunks. *)
         repeat (fun () -> return (!header <> "data"))
-               (read_int ic >> fun len ->
-                 discard (read_string ic len) >> fun () ->
-                   read_string ic 4 >> fun ret ->
-                   header := ret;
-                   return ());
+               (fun () ->
+                 read_int ic >> fun len ->
+                   discard (read_string ic len) >> fun () ->
+                     read_string ic 4 >> fun ret ->
+                     header := ret;
+                     return ());
                    
     |] >> fun () ->
       read_int ic >> fun length ->
@@ -131,3 +132,50 @@ let read path =
             data_offset      = offset ic;
             duration         = (float length) /. (float !byt_per_sec)
           }]
+
+let short_string i =
+  let up = i/256 in
+  let down = i-256*up in
+    (String.make 1 (char_of_int down))^
+    (String.make 1 (char_of_int up))
+
+let int_string n =
+  let b = Bytes.create 4 in
+  Bytes.set b 0 (char_of_int (n land 0xff));
+  Bytes.set b 1 (char_of_int ((n land 0xff00) lsr 8));
+  Bytes.set b 2 (char_of_int ((n land 0xff0000) lsr 16));
+  Bytes.set b 3 (char_of_int ((n land 0x7f000000) lsr 24));
+  Bytes.to_string b
+
+let write fd data cb =
+  let written = ref 0 in
+  let len = String.length data in
+  let buf = Buffer.from ~encoding:"binary" data in 
+  let blen = Buffer.length buf in
+  repeat (fun () -> return (!written < len))
+         (fun () ->
+           let offset = float !written in
+           Fs.write fd buf ~offset >> fun (ret,_) ->
+             written := !written + int_of_float ret;
+             return ()) cb
+
+let write ~header ~data path =
+  Fs.openFile path "w" >> fun fd ->
+    let write = write fd in
+    let dlen = String.length data in
+    seqa [|
+      write "RIFF";
+      write (int_string (36+dlen));
+      write "WAVE";
+      write "fmt ";
+      write (int_string 16);
+      write (short_string 1);
+      write (short_string header##channels);
+      write (int_string header##sample_rate);
+      write (int_string header##bytes_per_second);
+      write (short_string header##bytes_per_sample);
+      write (short_string header##bits_per_sample);
+      write "data";
+      write (int_string dlen);
+      write data
+    |] &> fun () -> Fs.close fd

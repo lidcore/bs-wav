@@ -15,7 +15,7 @@
     "bs-platform": "^3.0.0"
   },
   "dependencies": {
-    "bs-callback": "^1.3.6",
+    "bs-callback": "^1.4.0",
     "@lidcore/bs-node": "git+https://github.com/lidcore/bs-node.git"
   }
 }

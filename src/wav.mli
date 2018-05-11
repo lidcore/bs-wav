@@ -1,4 +1,4 @@
-type t = <
+type header = <
   channels         : int; (* 1 = mono ; 2 = stereo *)
   sample_rate      : int; (* in Hz *)
   bytes_per_second : int;
@@ -11,4 +11,5 @@ type t = <
 
 exception Not_a_wav_file of string
 
-val read : string -> t BsCallback.t
+val read : string -> header BsCallback.t
+val write : header:header -> data:string -> string -> unit BsCallback.t

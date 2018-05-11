@@ -2,8 +2,12 @@
 'use strict';
 
 var $$Array = require("bs-platform/lib/js/array.js");
+var Bytes = require("bs-platform/lib/js/bytes.js");
+var $$String = require("bs-platform/lib/js/string.js");
 var BsCallback = require("bs-callback/src/bsCallback.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
+var Pervasives = require("bs-platform/lib/js/pervasives.js");
+var Caml_string = require("bs-platform/lib/js/caml_string.js");
 var Caml_exceptions = require("bs-platform/lib/js/caml_exceptions.js");
 var Fs$LidcoreBsNode = require("@lidcore/bs-node/src/fs.js");
 var Buffer$LidcoreBsNode = require("@lidcore/bs-node/src/buffer.js");
@@ -16,7 +20,7 @@ var buf = Buffer$LidcoreBsNode.from(/* None */0, " ");
 function input_byte(ic) {
   var partial_arg = ic.fd;
   return BsCallback.$great$great((function (param) {
-                return Fs$LidcoreBsNode.read(/* None */0, partial_arg, buf, 0, 1, param);
+                return Fs$LidcoreBsNode.read(/* None */0, /* None */0, /* None */0, partial_arg, buf, param);
               }), (function (param) {
                 if (param[0] !== 1) {
                   throw [
@@ -73,7 +77,7 @@ function read_string(ic, n) {
   var buf = Buffer$LidcoreBsNode.alloc(n$1);
   var partial_arg = ic.fd;
   return BsCallback.$great$great((function (param) {
-                return Fs$LidcoreBsNode.read(/* None */0, partial_arg, buf, 0, n$1, param);
+                return Fs$LidcoreBsNode.read(/* None */0, /* None */0, /* None */0, partial_arg, buf, param);
               }), (function (param) {
                 var ret = param[0];
                 if (ret !== n$1) {
@@ -87,7 +91,7 @@ function read_string(ic, n) {
                       ];
                 }
                 ic.offset = ic.offset + (ret | 0) | 0;
-                var partial_arg = Buffer$LidcoreBsNode.toString(param[1]);
+                var partial_arg = Buffer$LidcoreBsNode.toString(/* None */0, /* None */0, /* None */0, param[1]);
                 return (function (param) {
                     return BsCallback.$$return(partial_arg, param);
                   });
@@ -188,26 +192,27 @@ function read(path) {
                                 tmp,
                                 BsCallback.$great$great(read_string(ic, 4), (function (ret) {
                                         var header = [ret];
-                                        var partial_arg = BsCallback.$great$great(read_int(ic), (function (len) {
-                                                var partial_arg = read_string(ic, len);
-                                                return BsCallback.$great$great((function (param) {
-                                                              return BsCallback.discard(partial_arg, param);
-                                                            }), (function () {
-                                                              return BsCallback.$great$great(read_string(ic, 4), (function (ret) {
-                                                                            header[0] = ret;
-                                                                            return (function (param) {
-                                                                                return BsCallback.$$return(/* () */0, param);
-                                                                              });
-                                                                          }));
-                                                            }));
-                                              }));
                                         return (function (param) {
                                             return BsCallback.repeat((function () {
                                                           var partial_arg = header[0] !== "data";
                                                           return (function (param) {
                                                               return BsCallback.$$return(partial_arg, param);
                                                             });
-                                                        }), partial_arg, param);
+                                                        }), (function () {
+                                                          return BsCallback.$great$great(read_int(ic), (function (len) {
+                                                                        var partial_arg = read_string(ic, len);
+                                                                        return BsCallback.$great$great((function (param) {
+                                                                                      return BsCallback.discard(partial_arg, param);
+                                                                                    }), (function () {
+                                                                                      return BsCallback.$great$great(read_string(ic, 4), (function (ret) {
+                                                                                                    header[0] = ret;
+                                                                                                    return (function (param) {
+                                                                                                        return BsCallback.$$return(/* () */0, param);
+                                                                                                      });
+                                                                                                  }));
+                                                                                    }));
+                                                                      }));
+                                                        }), param);
                                           });
                                       }))
                               ]), (function () {
@@ -233,6 +238,113 @@ function read(path) {
               }));
 }
 
+function short_string(i) {
+  var up = i / 256 | 0;
+  var down = i - (up << 8) | 0;
+  return $$String.make(1, Pervasives.char_of_int(down)) + $$String.make(1, Pervasives.char_of_int(up));
+}
+
+function int_string(n) {
+  var b = Caml_string.caml_create_string(4);
+  b[0] = Pervasives.char_of_int(n & 255);
+  b[1] = Pervasives.char_of_int(((n & 65280) >>> 8));
+  b[2] = Pervasives.char_of_int(((n & 16711680) >>> 16));
+  b[3] = Pervasives.char_of_int(((n & 2130706432) >>> 24));
+  return Bytes.to_string(b);
+}
+
+function write(header, data, path) {
+  return BsCallback.$great$great((function (param) {
+                return Fs$LidcoreBsNode.openFile(path, "w", param);
+              }), (function (fd) {
+                var write = function (param, param$1) {
+                  var fd$1 = fd;
+                  var data = param;
+                  var cb = param$1;
+                  var written = [0];
+                  var len = data.length;
+                  var buf = Buffer$LidcoreBsNode.from(/* Some */["binary"], data);
+                  Buffer$LidcoreBsNode.length(buf);
+                  return BsCallback.repeat((function () {
+                                var partial_arg = written[0] < len;
+                                return (function (param) {
+                                    return BsCallback.$$return(partial_arg, param);
+                                  });
+                              }), (function () {
+                                var offset = written[0];
+                                var partial_arg = /* Some */[offset];
+                                return BsCallback.$great$great((function (param) {
+                                              return Fs$LidcoreBsNode.write(/* None */0, partial_arg, /* None */0, fd$1, buf, param);
+                                            }), (function (param) {
+                                              written[0] = written[0] + (param[0] | 0) | 0;
+                                              return (function (param) {
+                                                  return BsCallback.$$return(/* () */0, param);
+                                                });
+                                            }));
+                              }), cb);
+                };
+                var dlen = data.length;
+                var partial_arg = int_string(36 + dlen | 0);
+                var partial_arg$1 = int_string(16);
+                var partial_arg$2 = short_string(1);
+                var partial_arg$3 = short_string(header.channels);
+                var partial_arg$4 = int_string(header.sample_rate);
+                var partial_arg$5 = int_string(header.bytes_per_second);
+                var partial_arg$6 = short_string(header.bytes_per_sample);
+                var partial_arg$7 = short_string(header.bits_per_sample);
+                var partial_arg$8 = int_string(dlen);
+                return BsCallback.$unknown$great(BsCallback.seqa(/* None */0, /* array */[
+                                (function (param) {
+                                    return write("RIFF", param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg, param);
+                                  }),
+                                (function (param) {
+                                    return write("WAVE", param);
+                                  }),
+                                (function (param) {
+                                    return write("fmt ", param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg$1, param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg$2, param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg$3, param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg$4, param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg$5, param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg$6, param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg$7, param);
+                                  }),
+                                (function (param) {
+                                    return write("data", param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg$8, param);
+                                  }),
+                                (function (param) {
+                                    return write(data, param);
+                                  })
+                              ]), (function () {
+                              return (function (param) {
+                                  return Fs$LidcoreBsNode.close(fd, param);
+                                });
+                            }));
+              }));
+}
+
 exports.Not_a_wav_file = Not_a_wav_file;
 exports.read = read;
+exports.write = write;
 /* buf Not a pure module */
