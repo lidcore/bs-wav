@@ -7,6 +7,20 @@ external exit : int -> 'a = "" [@@bs.val] [@@bs.scope "process"]
 
 let usage = "Usage: wavinfo /path/to/input.wav /path/to/output.wav"
 
+let readFile ~position path =
+  let stats = Fs.statSync path in
+  let length =
+    stats##size -. position
+  in
+  let content =
+    Buffer.alloc stats##size
+  in
+  Fs.openFile path "r" >> fun fd ->
+    (Fs.read ~position fd content >> fun (read,_) ->
+      assert (read = length);
+      return content) &> fun () ->
+        Fs.close fd
+
 let () =
  let input, output =
   try
@@ -15,20 +29,10 @@ let () =
     Js.log usage;
     exit 1
  in
- finish (Wav.read input >> fun header ->
-   let stats = Fs.statSync input in
+ finish (Wav.read input >> fun wav ->
+   let header = wav##header in
    let position =
-     float header##data_offset
+     float wav##data_offset
    in
-   let length =
-     stats##size -. position
-   in
-   let content =
-     Buffer.alloc stats##size
-   in
-   (Fs.openFile input "r" >> fun fd ->
-     (Fs.read ~position fd content >> fun (read,_) ->
-       assert (read = length);
-       return (Buffer.toString ~encoding:"binary" content)) &> fun () ->
-         Fs.close fd) >> fun data ->
-         Wav.write ~header ~data output)
+   readFile ~position input >> fun data ->
+     Wav.write ~header ~data output)

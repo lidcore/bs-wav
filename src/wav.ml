@@ -8,8 +8,12 @@ type header = <
   bytes_per_sample : int; (* 1=8 bit Mono, 2=8 bit Stereo *)
                           (* or 16 bit Mono, 4=16 bit Stereo *)
   bits_per_sample  : int;
-  data_offset      : int;
-  duration         : float
+> Js.t
+
+type t = <
+  header      : header;
+  data_offset : int;
+  duration    : float
 > Js.t
 
 type input = {
@@ -123,21 +127,29 @@ let read path =
     |] >> fun () ->
       read_int ic >> fun length ->
         Fs.close fd >> fun () ->
-          return [%bs.obj{
+          let header = [%bs.obj{
             channels         = !chan_num;
             sample_rate      = !samp_hz;
             bytes_per_second = !byt_per_sec;
             bytes_per_sample = !byt_per_samp;
             bits_per_sample  = !bit_per_samp;
-            data_offset      = offset ic;
-            duration         = (float length) /. (float !byt_per_sec)
+          }] in
+          return [%bs.obj{
+            header      = header;
+            data_offset = offset ic;
+            duration    = (float length) /. (float !byt_per_sec)
           }]
 
 let short_string i =
   let up = i/256 in
   let down = i-256*up in
-    (String.make 1 (char_of_int down))^
-    (String.make 1 (char_of_int up))
+  let pre =
+    String.make 1 (char_of_int down)
+  in
+  let post =
+    String.make 1 (char_of_int up)
+  in
+  `String {j|$(pre)$(post)|j}
 
 let int_string n =
   let b = Bytes.create 4 in
@@ -145,13 +157,17 @@ let int_string n =
   Bytes.set b 1 (char_of_int ((n land 0xff00) lsr 8));
   Bytes.set b 2 (char_of_int ((n land 0xff0000) lsr 16));
   Bytes.set b 3 (char_of_int ((n land 0x7f000000) lsr 24));
-  Bytes.to_string b
+  `String (Bytes.to_string b)
 
 let write fd data cb =
   let written = ref 0 in
-  let len = String.length data in
-  let buf = Buffer.from ~encoding:"binary" data in 
-  let blen = Buffer.length buf in
+  let len, buf =
+    match data with
+      | `String data ->
+          String.length data, Buffer.from ~encoding:"binary" data
+      | `Buffer data ->
+          int_of_float (Buffer.length data), data
+  in
   repeat (fun () -> return (!written < len))
          (fun () ->
            let offset = float !written in
@@ -162,12 +178,14 @@ let write fd data cb =
 let write ~header ~data path =
   Fs.openFile path "w" >> fun fd ->
     let write = write fd in
-    let dlen = String.length data in
+    let dlen =
+      int_of_float (Buffer.length data)
+    in
     seqa [|
-      write "RIFF";
+      write (`String "RIFF");
       write (int_string (36+dlen));
-      write "WAVE";
-      write "fmt ";
+      write (`String "WAVE");
+      write (`String "fmt ");
       write (int_string 16);
       write (short_string 1);
       write (short_string header##channels);
@@ -175,7 +193,7 @@ let write ~header ~data path =
       write (int_string header##bytes_per_second);
       write (short_string header##bytes_per_sample);
       write (short_string header##bits_per_sample);
-      write "data";
+      write (`String "data");
       write (int_string dlen);
-      write data
+      write (`Buffer data)
     |] &> fun () -> Fs.close fd

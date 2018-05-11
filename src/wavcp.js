@@ -10,6 +10,38 @@ var Caml_builtin_exceptions = require("bs-platform/lib/js/caml_builtin_exception
 
 var usage = "Usage: wavinfo /path/to/input.wav /path/to/output.wav";
 
+function readFile(position, path) {
+  var stats = Fs$LidcoreBsNode.statSync(path);
+  var length = stats.size - position;
+  var content = Buffer$LidcoreBsNode.alloc(stats.size);
+  return BsCallback.$great$great((function (param) {
+                return Fs$LidcoreBsNode.openFile(path, "r", param);
+              }), (function (fd) {
+                var partial_arg = /* Some */[position];
+                return BsCallback.$unknown$great(BsCallback.$great$great((function (param) {
+                                  return Fs$LidcoreBsNode.read(partial_arg, /* None */0, /* None */0, fd, content, param);
+                                }), (function (param) {
+                                  if (param[0] !== length) {
+                                    throw [
+                                          Caml_builtin_exceptions.assert_failure,
+                                          [
+                                            "wavcp.ml",
+                                            20,
+                                            6
+                                          ]
+                                        ];
+                                  }
+                                  return (function (param) {
+                                      return BsCallback.$$return(content, param);
+                                    });
+                                })), (function () {
+                              return (function (param) {
+                                  return Fs$LidcoreBsNode.close(fd, param);
+                                });
+                            }));
+              }));
+}
+
 var match;
 
 try {
@@ -27,41 +59,14 @@ var output = match[1];
 
 var input = match[0];
 
-BsCallback.finish(/* None */0, BsCallback.$great$great(Wav$LidcoreBsWav.read(input), (function (header) {
-            var stats = Fs$LidcoreBsNode.statSync(input);
-            var position = header.data_offset;
-            var length = stats.size - position;
-            var content = Buffer$LidcoreBsNode.alloc(stats.size);
-            return BsCallback.$great$great(BsCallback.$great$great((function (param) {
-                              return Fs$LidcoreBsNode.openFile(input, "r", param);
-                            }), (function (fd) {
-                              var partial_arg = /* Some */[position];
-                              return BsCallback.$unknown$great(BsCallback.$great$great((function (param) {
-                                                return Fs$LidcoreBsNode.read(partial_arg, /* None */0, /* None */0, fd, content, param);
-                                              }), (function (param) {
-                                                if (param[0] !== length) {
-                                                  throw [
-                                                        Caml_builtin_exceptions.assert_failure,
-                                                        [
-                                                          "wavcp.ml",
-                                                          31,
-                                                          7
-                                                        ]
-                                                      ];
-                                                }
-                                                var partial_arg = Buffer$LidcoreBsNode.toString(/* Some */["binary"], /* None */0, /* None */0, content);
-                                                return (function (param) {
-                                                    return BsCallback.$$return(partial_arg, param);
-                                                  });
-                                              })), (function () {
-                                            return (function (param) {
-                                                return Fs$LidcoreBsNode.close(fd, param);
-                                              });
-                                          }));
-                            })), (function (data) {
+BsCallback.finish(/* None */0, BsCallback.$great$great(Wav$LidcoreBsWav.read(input), (function (wav) {
+            var header = wav.header;
+            var position = wav.data_offset;
+            return BsCallback.$great$great(readFile(position, input), (function (data) {
                           return Wav$LidcoreBsWav.write(header, data, output);
                         }));
           })));
 
 exports.usage = usage;
+exports.readFile = readFile;
 /* match Not a pure module */

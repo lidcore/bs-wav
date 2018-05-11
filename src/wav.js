@@ -27,7 +27,7 @@ function input_byte(ic) {
                         Caml_builtin_exceptions.assert_failure,
                         [
                           "wav.ml",
-                          26,
+                          30,
                           4
                         ]
                       ];
@@ -85,7 +85,7 @@ function read_string(ic, n) {
                         Caml_builtin_exceptions.assert_failure,
                         [
                           "wav.ml",
-                          53,
+                          57,
                           4
                         ]
                       ];
@@ -220,12 +220,15 @@ function read(path) {
                                             return BsCallback.$great$great((function (param) {
                                                           return Fs$LidcoreBsNode.close(fd, param);
                                                         }), (function () {
-                                                          var partial_arg = {
+                                                          var header = {
                                                             channels: chan_num[0],
                                                             sample_rate: samp_hz[0],
                                                             bytes_per_second: byt_per_sec[0],
                                                             bytes_per_sample: byt_per_samp[0],
-                                                            bits_per_sample: bit_per_samp[0],
+                                                            bits_per_sample: bit_per_samp[0]
+                                                          };
+                                                          var partial_arg = {
+                                                            header: header,
                                                             data_offset: ic.offset,
                                                             duration: length / byt_per_sec[0]
                                                           };
@@ -241,7 +244,12 @@ function read(path) {
 function short_string(i) {
   var up = i / 256 | 0;
   var down = i - (up << 8) | 0;
-  return $$String.make(1, Pervasives.char_of_int(down)) + $$String.make(1, Pervasives.char_of_int(up));
+  var pre = $$String.make(1, Pervasives.char_of_int(down));
+  var post = $$String.make(1, Pervasives.char_of_int(up));
+  return /* `String */[
+          -976970511,
+          "" + (String(pre) + ("" + (String(post) + "")))
+        ];
 }
 
 function int_string(n) {
@@ -250,7 +258,10 @@ function int_string(n) {
   b[1] = Pervasives.char_of_int(((n & 65280) >>> 8));
   b[2] = Pervasives.char_of_int(((n & 16711680) >>> 16));
   b[3] = Pervasives.char_of_int(((n & 2130706432) >>> 24));
-  return Bytes.to_string(b);
+  return /* `String */[
+          -976970511,
+          Bytes.to_string(b)
+        ];
 }
 
 function write(header, data, path) {
@@ -262,9 +273,22 @@ function write(header, data, path) {
                   var data = param;
                   var cb = param$1;
                   var written = [0];
-                  var len = data.length;
-                  var buf = Buffer$LidcoreBsNode.from(/* Some */["binary"], data);
-                  Buffer$LidcoreBsNode.length(buf);
+                  var match;
+                  if (data[0] >= 86585632) {
+                    var data$1 = data[1];
+                    match = /* tuple */[
+                      Buffer$LidcoreBsNode.length(data$1) | 0,
+                      data$1
+                    ];
+                  } else {
+                    var data$2 = data[1];
+                    match = /* tuple */[
+                      data$2.length,
+                      Buffer$LidcoreBsNode.from(/* Some */["binary"], data$2)
+                    ];
+                  }
+                  var buf = match[1];
+                  var len = match[0];
                   return BsCallback.repeat((function () {
                                 var partial_arg = written[0] < len;
                                 return (function (param) {
@@ -283,28 +307,39 @@ function write(header, data, path) {
                                             }));
                               }), cb);
                 };
-                var dlen = data.length;
-                var partial_arg = int_string(36 + dlen | 0);
-                var partial_arg$1 = int_string(16);
-                var partial_arg$2 = short_string(1);
-                var partial_arg$3 = short_string(header.channels);
-                var partial_arg$4 = int_string(header.sample_rate);
-                var partial_arg$5 = int_string(header.bytes_per_second);
-                var partial_arg$6 = short_string(header.bytes_per_sample);
-                var partial_arg$7 = short_string(header.bits_per_sample);
-                var partial_arg$8 = int_string(dlen);
+                var dlen = Buffer$LidcoreBsNode.length(data) | 0;
+                var partial_arg = /* `String */[
+                  -976970511,
+                  "RIFF"
+                ];
+                var partial_arg$1 = int_string(36 + dlen | 0);
+                var partial_arg$2 = /* `String */[
+                  -976970511,
+                  "WAVE"
+                ];
+                var partial_arg$3 = /* `String */[
+                  -976970511,
+                  "fmt "
+                ];
+                var partial_arg$4 = int_string(16);
+                var partial_arg$5 = short_string(1);
+                var partial_arg$6 = short_string(header.channels);
+                var partial_arg$7 = int_string(header.sample_rate);
+                var partial_arg$8 = int_string(header.bytes_per_second);
+                var partial_arg$9 = short_string(header.bytes_per_sample);
+                var partial_arg$10 = short_string(header.bits_per_sample);
+                var partial_arg$11 = /* `String */[
+                  -976970511,
+                  "data"
+                ];
+                var partial_arg$12 = int_string(dlen);
+                var partial_arg$13 = /* `Buffer */[
+                  86585632,
+                  data
+                ];
                 return BsCallback.$unknown$great(BsCallback.seqa(/* None */0, /* array */[
                                 (function (param) {
-                                    return write("RIFF", param);
-                                  }),
-                                (function (param) {
                                     return write(partial_arg, param);
-                                  }),
-                                (function (param) {
-                                    return write("WAVE", param);
-                                  }),
-                                (function (param) {
-                                    return write("fmt ", param);
                                   }),
                                 (function (param) {
                                     return write(partial_arg$1, param);
@@ -328,13 +363,22 @@ function write(header, data, path) {
                                     return write(partial_arg$7, param);
                                   }),
                                 (function (param) {
-                                    return write("data", param);
-                                  }),
-                                (function (param) {
                                     return write(partial_arg$8, param);
                                   }),
                                 (function (param) {
-                                    return write(data, param);
+                                    return write(partial_arg$9, param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg$10, param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg$11, param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg$12, param);
+                                  }),
+                                (function (param) {
+                                    return write(partial_arg$13, param);
                                   })
                               ]), (function () {
                               return (function (param) {
