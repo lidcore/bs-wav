@@ -2,7 +2,7 @@
 
 Wav parser and writter written for Bucklescript/node.js using Callback monad.
 
-This provides a simple API to read and WAV files. It also examplifies how to use Bucklescript, node.js and [bs-callback](https://github.com/lidcore/bs-callback)
+This provides a simple API to read and WAV files. It also examplifies how to use Bucklescript, [@lidcore/bs-node](https://github.com/lidcore/bs-node) and [bs-callback](https://github.com/lidcore/bs-callback)
 to write sane asynchronous code.
 
 Current API:
