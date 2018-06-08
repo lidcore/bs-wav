@@ -1,4 +1,4 @@
-open BsCallback
+open BsAsyncMonad.Callback
 
 external argv : string array = "" [@@bs.val] [@@bs.scope "process"]
 

@@ -4,10 +4,10 @@
 var $$Array = require("bs-platform/lib/js/array.js");
 var Bytes = require("bs-platform/lib/js/bytes.js");
 var $$String = require("bs-platform/lib/js/string.js");
-var BsCallback = require("bs-callback/src/bsCallback.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var Pervasives = require("bs-platform/lib/js/pervasives.js");
 var Caml_string = require("bs-platform/lib/js/caml_string.js");
+var BsAsyncMonad = require("bs-async-monad/src/bsAsyncMonad.js");
 var Caml_exceptions = require("bs-platform/lib/js/caml_exceptions.js");
 var Fs$LidcoreBsNode = require("@lidcore/bs-node/src/fs.js");
 var Buffer$LidcoreBsNode = require("@lidcore/bs-node/src/buffer.js");
@@ -19,7 +19,7 @@ var buf = Buffer$LidcoreBsNode.from(/* None */0, " ");
 
 function input_byte(ic) {
   var partial_arg = ic.fd;
-  return BsCallback.$great$great((function (param) {
+  return BsAsyncMonad.Callback[/* >> */5]((function (param) {
                 return Fs$LidcoreBsNode.read(/* None */0, /* None */0, /* None */0, partial_arg, buf, param);
               }), (function (param) {
                 if (param[0] !== 1) {
@@ -34,40 +34,45 @@ function input_byte(ic) {
                 }
                 ic.offset = ic.offset + 1 | 0;
                 var partial_arg = Buffer$LidcoreBsNode.get(param[1], 0);
+                var partial_arg$1 = BsAsyncMonad.Callback[/* return */2];
                 return (function (param) {
-                    return BsCallback.$$return(partial_arg, param);
+                    return partial_arg$1(partial_arg, param);
                   });
               }));
 }
 
 function read_float_num_bytes(ic, len) {
   var l = $$Array.to_list(Caml_array.caml_make_vect(len, 0));
-  return BsCallback.fold_lefti(/* None */0, (function (cur, idx, _) {
-                return BsCallback.$great$great(input_byte(ic), (function (b) {
+  var partial_arg = BsAsyncMonad.Callback[/* return */2];
+  return BsAsyncMonad.Callback[/* fold_lefti */16](/* None */0, (function (cur, idx, _) {
+                return BsAsyncMonad.Callback[/* >> */5](input_byte(ic), (function (b) {
                               var partial_arg = b * Math.pow(256, idx) + cur;
+                              var partial_arg$1 = BsAsyncMonad.Callback[/* return */2];
                               return (function (param) {
-                                  return BsCallback.$$return(partial_arg, param);
+                                  return partial_arg$1(partial_arg, param);
                                 });
                             }));
               }), (function (param) {
-                return BsCallback.$$return(0, param);
+                return partial_arg(0, param);
               }), l);
 }
 
 function read_int(ic) {
-  return BsCallback.$great$great(read_float_num_bytes(ic, 4), (function (ret) {
+  return BsAsyncMonad.Callback[/* >> */5](read_float_num_bytes(ic, 4), (function (ret) {
                 var partial_arg = ret | 0;
+                var partial_arg$1 = BsAsyncMonad.Callback[/* return */2];
                 return (function (param) {
-                    return BsCallback.$$return(partial_arg, param);
+                    return partial_arg$1(partial_arg, param);
                   });
               }));
 }
 
 function read_short(ic) {
-  return BsCallback.$great$great(read_float_num_bytes(ic, 2), (function (ret) {
+  return BsAsyncMonad.Callback[/* >> */5](read_float_num_bytes(ic, 2), (function (ret) {
                 var partial_arg = ret | 0;
+                var partial_arg$1 = BsAsyncMonad.Callback[/* return */2];
                 return (function (param) {
-                    return BsCallback.$$return(partial_arg, param);
+                    return partial_arg$1(partial_arg, param);
                   });
               }));
 }
@@ -76,7 +81,7 @@ function read_string(ic, n) {
   var n$1 = n;
   var buf = Buffer$LidcoreBsNode.alloc(n$1);
   var partial_arg = ic.fd;
-  return BsCallback.$great$great((function (param) {
+  return BsAsyncMonad.Callback[/* >> */5]((function (param) {
                 return Fs$LidcoreBsNode.read(/* None */0, /* None */0, /* None */0, partial_arg, buf, param);
               }), (function (param) {
                 var ret = param[0];
@@ -92,8 +97,9 @@ function read_string(ic, n) {
                 }
                 ic.offset = ic.offset + (ret | 0) | 0;
                 var partial_arg = Buffer$LidcoreBsNode.toString(/* None */0, /* None */0, /* None */0, param[1]);
+                var partial_arg$1 = BsAsyncMonad.Callback[/* return */2];
                 return (function (param) {
-                    return BsCallback.$$return(partial_arg, param);
+                    return partial_arg$1(partial_arg, param);
                   });
               }));
 }
@@ -101,16 +107,18 @@ function read_string(ic, n) {
 function read(path) {
   var check = function (condition, reason) {
     if (condition) {
+      var partial_arg = BsAsyncMonad.Callback[/* return */2];
       return (function (param) {
-          return BsCallback.$$return(/* () */0, param);
+          return partial_arg(/* () */0, param);
         });
     } else {
-      var partial_arg = [
+      var partial_arg$1 = [
         Not_a_wav_file,
         reason
       ];
+      var partial_arg$2 = BsAsyncMonad.Callback[/* fail */3];
       return (function (param) {
-          return BsCallback.fail(partial_arg, param);
+          return partial_arg$2(partial_arg$1, param);
         });
     }
   };
@@ -120,7 +128,7 @@ function read(path) {
   var byt_per_sec = [-1];
   var byt_per_samp = [-1];
   var bit_per_samp = [-1];
-  return BsCallback.$great$great((function (param) {
+  return BsAsyncMonad.Callback[/* >> */5]((function (param) {
                 return Fs$LidcoreBsNode.openFile(path, "r", param);
               }), (function (fd) {
                 var ic = {
@@ -128,86 +136,98 @@ function read(path) {
                   offset: 0
                 };
                 var partial_arg = read_int(ic);
+                var partial_arg$1 = BsAsyncMonad.Callback[/* discard */12];
                 var tmp;
                 if (fmt_len[0] > 16) {
-                  var partial_arg$1 = read_float_num_bytes(ic, fmt_len[0] - 16 | 0);
+                  var partial_arg$2 = read_float_num_bytes(ic, fmt_len[0] - 16 | 0);
+                  var partial_arg$3 = BsAsyncMonad.Callback[/* discard */12];
                   tmp = (function (param) {
-                      return BsCallback.discard(partial_arg$1, param);
+                      return partial_arg$3(partial_arg$2, param);
                     });
                 } else {
+                  var partial_arg$4 = BsAsyncMonad.Callback[/* return */2];
                   tmp = (function (param) {
-                      return BsCallback.$$return(/* () */0, param);
+                      return partial_arg$4(/* () */0, param);
                     });
                 }
-                return BsCallback.$great$great(BsCallback.seqa(/* None */0, /* array */[
-                                BsCallback.$great$great(read_string(ic, 4), (function (ret) {
+                return BsAsyncMonad.Callback[/* >> */5](BsAsyncMonad.Callback[/* seqa */23](/* None */0, /* array */[
+                                BsAsyncMonad.Callback[/* >> */5](read_string(ic, 4), (function (ret) {
                                         return check(ret === "RIFF", "Bad header: \"RIFF\" expected");
                                       })),
                                 (function (param) {
-                                    return BsCallback.discard(partial_arg, param);
+                                    return partial_arg$1(partial_arg, param);
                                   }),
-                                BsCallback.$great$great(read_string(ic, 4), (function (ret) {
+                                BsAsyncMonad.Callback[/* >> */5](read_string(ic, 4), (function (ret) {
                                         return check(ret === "WAVE", "Bad header: \"WAVE\" expected");
                                       })),
-                                BsCallback.$great$great(read_string(ic, 4), (function (ret) {
+                                BsAsyncMonad.Callback[/* >> */5](read_string(ic, 4), (function (ret) {
                                         return check(ret === "fmt ", "Bad header: \"fmt \" expected");
                                       })),
-                                BsCallback.$great$great(read_int(ic), (function (ret) {
+                                BsAsyncMonad.Callback[/* >> */5](read_int(ic), (function (ret) {
                                         fmt_len[0] = ret;
                                         return check(ret >= 16, "Bad header: invalid \"fmt \" length");
                                       })),
-                                BsCallback.$great$great(read_short(ic), (function (ret) {
+                                BsAsyncMonad.Callback[/* >> */5](read_short(ic), (function (ret) {
                                         return check(ret === 1, "Bad header: unhandled codec");
                                       })),
-                                BsCallback.$great$great(read_short(ic), (function (ret) {
+                                BsAsyncMonad.Callback[/* >> */5](read_short(ic), (function (ret) {
                                         chan_num[0] = ret;
+                                        var partial_arg = BsAsyncMonad.Callback[/* return */2];
                                         return (function (param) {
-                                            return BsCallback.$$return(/* () */0, param);
+                                            return partial_arg(/* () */0, param);
                                           });
                                       })),
-                                BsCallback.$great$great(read_int(ic), (function (ret) {
+                                BsAsyncMonad.Callback[/* >> */5](read_int(ic), (function (ret) {
                                         samp_hz[0] = ret;
+                                        var partial_arg = BsAsyncMonad.Callback[/* return */2];
                                         return (function (param) {
-                                            return BsCallback.$$return(/* () */0, param);
+                                            return partial_arg(/* () */0, param);
                                           });
                                       })),
-                                BsCallback.$great$great(read_int(ic), (function (ret) {
+                                BsAsyncMonad.Callback[/* >> */5](read_int(ic), (function (ret) {
                                         byt_per_sec[0] = ret;
+                                        var partial_arg = BsAsyncMonad.Callback[/* return */2];
                                         return (function (param) {
-                                            return BsCallback.$$return(/* () */0, param);
+                                            return partial_arg(/* () */0, param);
                                           });
                                       })),
-                                BsCallback.$great$great(read_short(ic), (function (ret) {
+                                BsAsyncMonad.Callback[/* >> */5](read_short(ic), (function (ret) {
                                         byt_per_samp[0] = ret;
+                                        var partial_arg = BsAsyncMonad.Callback[/* return */2];
                                         return (function (param) {
-                                            return BsCallback.$$return(/* () */0, param);
+                                            return partial_arg(/* () */0, param);
                                           });
                                       })),
-                                BsCallback.$great$great(read_short(ic), (function (ret) {
+                                BsAsyncMonad.Callback[/* >> */5](read_short(ic), (function (ret) {
                                         bit_per_samp[0] = ret;
+                                        var partial_arg = BsAsyncMonad.Callback[/* return */2];
                                         return (function (param) {
-                                            return BsCallback.$$return(/* () */0, param);
+                                            return partial_arg(/* () */0, param);
                                           });
                                       })),
                                 tmp,
-                                BsCallback.$great$great(read_string(ic, 4), (function (ret) {
+                                BsAsyncMonad.Callback[/* >> */5](read_string(ic, 4), (function (ret) {
                                         var header = [ret];
+                                        var partial_arg = BsAsyncMonad.Callback[/* repeat */13];
                                         return (function (param) {
-                                            return BsCallback.repeat((function () {
+                                            return partial_arg((function () {
                                                           var partial_arg = header[0] !== "data";
+                                                          var partial_arg$1 = BsAsyncMonad.Callback[/* return */2];
                                                           return (function (param) {
-                                                              return BsCallback.$$return(partial_arg, param);
+                                                              return partial_arg$1(partial_arg, param);
                                                             });
                                                         }), (function () {
-                                                          return BsCallback.$great$great(read_int(ic), (function (len) {
+                                                          return BsAsyncMonad.Callback[/* >> */5](read_int(ic), (function (len) {
                                                                         var partial_arg = read_string(ic, len);
-                                                                        return BsCallback.$great$great((function (param) {
-                                                                                      return BsCallback.discard(partial_arg, param);
+                                                                        var partial_arg$1 = BsAsyncMonad.Callback[/* discard */12];
+                                                                        return BsAsyncMonad.Callback[/* >> */5]((function (param) {
+                                                                                      return partial_arg$1(partial_arg, param);
                                                                                     }), (function () {
-                                                                                      return BsCallback.$great$great(read_string(ic, 4), (function (ret) {
+                                                                                      return BsAsyncMonad.Callback[/* >> */5](read_string(ic, 4), (function (ret) {
                                                                                                     header[0] = ret;
+                                                                                                    var partial_arg = BsAsyncMonad.Callback[/* return */2];
                                                                                                     return (function (param) {
-                                                                                                        return BsCallback.$$return(/* () */0, param);
+                                                                                                        return partial_arg(/* () */0, param);
                                                                                                       });
                                                                                                   }));
                                                                                     }));
@@ -216,8 +236,8 @@ function read(path) {
                                           });
                                       }))
                               ]), (function () {
-                              return BsCallback.$great$great(read_int(ic), (function (length) {
-                                            return BsCallback.$great$great((function (param) {
+                              return BsAsyncMonad.Callback[/* >> */5](read_int(ic), (function (length) {
+                                            return BsAsyncMonad.Callback[/* >> */5]((function (param) {
                                                           return Fs$LidcoreBsNode.close(fd, param);
                                                         }), (function () {
                                                           var header = {
@@ -232,8 +252,9 @@ function read(path) {
                                                             data_offset: ic.offset,
                                                             duration: length / byt_per_sec[0]
                                                           };
+                                                          var partial_arg$1 = BsAsyncMonad.Callback[/* return */2];
                                                           return (function (param) {
-                                                              return BsCallback.$$return(partial_arg, param);
+                                                              return partial_arg$1(partial_arg, param);
                                                             });
                                                         }));
                                           }));
@@ -265,7 +286,7 @@ function int_string(n) {
 }
 
 function write(header, data, path) {
-  return BsCallback.$great$great((function (param) {
+  return BsAsyncMonad.Callback[/* >> */5]((function (param) {
                 return Fs$LidcoreBsNode.openFile(path, "w", param);
               }), (function (fd) {
                 var write = function (param, param$1) {
@@ -289,20 +310,22 @@ function write(header, data, path) {
                   }
                   var buf = match[1];
                   var len = match[0];
-                  return BsCallback.repeat((function () {
+                  return BsAsyncMonad.Callback[/* repeat */13]((function () {
                                 var partial_arg = written[0] < len;
+                                var partial_arg$1 = BsAsyncMonad.Callback[/* return */2];
                                 return (function (param) {
-                                    return BsCallback.$$return(partial_arg, param);
+                                    return partial_arg$1(partial_arg, param);
                                   });
                               }), (function () {
                                 var offset = written[0];
                                 var partial_arg = /* Some */[offset];
-                                return BsCallback.$great$great((function (param) {
+                                return BsAsyncMonad.Callback[/* >> */5]((function (param) {
                                               return Fs$LidcoreBsNode.write(/* None */0, partial_arg, /* None */0, fd$1, buf, param);
                                             }), (function (param) {
                                               written[0] = written[0] + (param[0] | 0) | 0;
+                                              var partial_arg = BsAsyncMonad.Callback[/* return */2];
                                               return (function (param) {
-                                                  return BsCallback.$$return(/* () */0, param);
+                                                  return partial_arg(/* () */0, param);
                                                 });
                                             }));
                               }), cb);
@@ -337,7 +360,7 @@ function write(header, data, path) {
                   86585632,
                   data
                 ];
-                return BsCallback.$unknown$great(BsCallback.seqa(/* None */0, /* array */[
+                return BsAsyncMonad.Callback[/* &> */11](BsAsyncMonad.Callback[/* seqa */23](/* None */0, /* array */[
                                 (function (param) {
                                     return write(partial_arg, param);
                                   }),

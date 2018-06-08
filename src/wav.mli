@@ -1,3 +1,4 @@
+open BsAsyncMonad
 open LidcoreBsNode
 
 type header = <
@@ -17,5 +18,5 @@ type t = <
 
 exception Not_a_wav_file of string
 
-val read : string -> t BsCallback.t
-val write : header:header -> data:Buffer.t -> string -> unit BsCallback.t
+val read : string -> t Callback.t
+val write : header:header -> data:Buffer.t -> string -> unit Callback.t
