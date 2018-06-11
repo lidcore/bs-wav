@@ -157,7 +157,7 @@ function find_chunk(ic, id) {
               }));
 }
 
-function read(path) {
+function read(fd) {
   var check = function (condition, reason) {
     if (condition) {
       var partial_arg = [
@@ -182,130 +182,114 @@ function read(path) {
   var byt_per_sec = [-1];
   var byt_per_samp = [-1];
   var bit_per_samp = [-1];
+  var ic = {
+    fd: fd,
+    offset: 0
+  };
+  var partial_arg = read_int(ic);
+  var partial_arg$1 = BsAsyncMonad.Callback[/* discard */12];
+  var tmp;
+  if (remaining_fmt_len[0] > 0) {
+    var partial_arg$2 = read_float_num_bytes(ic, remaining_fmt_len[0]);
+    var partial_arg$3 = BsAsyncMonad.Callback[/* discard */12];
+    tmp = (function (param) {
+        return partial_arg$3(partial_arg$2, param);
+      });
+  } else {
+    var partial_arg$4 = BsAsyncMonad.Callback[/* return */2];
+    tmp = (function (param) {
+        return partial_arg$4(/* () */0, param);
+      });
+  }
+  return BsAsyncMonad.Callback[/* >> */5](BsAsyncMonad.Callback[/* seqa */23](/* None */0, /* array */[
+                  BsAsyncMonad.Callback[/* >> */5](read_string(ic, 4), (function (ret) {
+                          return check(ret !== "RIFF", "Bad header: \"RIFF\" expected");
+                        })),
+                  (function (param) {
+                      return partial_arg$1(partial_arg, param);
+                    }),
+                  BsAsyncMonad.Callback[/* >> */5](read_string(ic, 4), (function (ret) {
+                          return check(ret !== "WAVE", "Bad header: \"WAVE\" expected");
+                        })),
+                  find_chunk(ic, "fmt "),
+                  BsAsyncMonad.Callback[/* >> */5](read_int(ic), (function (ret) {
+                          remaining_fmt_len[0] = (ret + ret % 2 | 0) - 16 | 0;
+                          return check(!List.mem(ret, /* :: */[
+                                          16,
+                                          /* :: */[
+                                            18,
+                                            /* :: */[
+                                              40,
+                                              /* [] */0
+                                            ]
+                                          ]
+                                        ]), "Bad header: invalid \"fmt \" length");
+                        })),
+                  BsAsyncMonad.Callback[/* >> */5](read_short(ic), (function (code) {
+                          format_code[0] = code;
+                          return check(!List.mem(code, /* :: */[
+                                          1,
+                                          /* :: */[
+                                            3,
+                                            /* :: */[
+                                              6,
+                                              /* :: */[
+                                                7,
+                                                /* :: */[
+                                                  65534,
+                                                  /* [] */0
+                                                ]
+                                              ]
+                                            ]
+                                          ]
+                                        ]), "Bad header: unhandled codec");
+                        })),
+                  BsAsyncMonad.Callback[/* >| */9](read_short(ic), (function (ret) {
+                          chan_num[0] = ret;
+                          return /* () */0;
+                        })),
+                  BsAsyncMonad.Callback[/* >| */9](read_int(ic), (function (ret) {
+                          samp_hz[0] = ret;
+                          return /* () */0;
+                        })),
+                  BsAsyncMonad.Callback[/* >| */9](read_int(ic), (function (ret) {
+                          byt_per_sec[0] = ret;
+                          return /* () */0;
+                        })),
+                  BsAsyncMonad.Callback[/* >| */9](read_short(ic), (function (ret) {
+                          byt_per_samp[0] = ret;
+                          return /* () */0;
+                        })),
+                  BsAsyncMonad.Callback[/* >| */9](read_short(ic), (function (ret) {
+                          bit_per_samp[0] = ret;
+                          return /* () */0;
+                        })),
+                  tmp,
+                  find_chunk(ic, "data")
+                ]), (function () {
+                return BsAsyncMonad.Callback[/* >| */9](read_int(ic), (function (length) {
+                              var header = {
+                                channels: chan_num[0],
+                                format_code: format_code[0],
+                                sample_rate: samp_hz[0],
+                                bytes_per_second: byt_per_sec[0],
+                                bytes_per_sample: byt_per_samp[0],
+                                bits_per_sample: bit_per_samp[0]
+                              };
+                              return {
+                                      header: header,
+                                      data_offset: ic.offset,
+                                      duration: length / byt_per_sec[0]
+                                    };
+                            }));
+              }));
+}
+
+function read$1(path) {
   return BsAsyncMonad.Callback[/* >> */5]((function (param) {
                 return Fs$LidcoreBsNode.openFile(path, "r", param);
               }), (function (fd) {
-                var ic = {
-                  fd: fd,
-                  offset: 0
-                };
-                var partial_arg = read_int(ic);
-                var partial_arg$1 = BsAsyncMonad.Callback[/* discard */12];
-                var tmp;
-                if (remaining_fmt_len[0] > 0) {
-                  var partial_arg$2 = read_float_num_bytes(ic, remaining_fmt_len[0]);
-                  var partial_arg$3 = BsAsyncMonad.Callback[/* discard */12];
-                  tmp = (function (param) {
-                      return partial_arg$3(partial_arg$2, param);
-                    });
-                } else {
-                  var partial_arg$4 = BsAsyncMonad.Callback[/* return */2];
-                  tmp = (function (param) {
-                      return partial_arg$4(/* () */0, param);
-                    });
-                }
-                var $$process = BsAsyncMonad.Callback[/* >> */5](BsAsyncMonad.Callback[/* seqa */23](/* None */0, /* array */[
-                          BsAsyncMonad.Callback[/* >> */5](read_string(ic, 4), (function (ret) {
-                                  return check(ret !== "RIFF", "Bad header: \"RIFF\" expected");
-                                })),
-                          (function (param) {
-                              return partial_arg$1(partial_arg, param);
-                            }),
-                          BsAsyncMonad.Callback[/* >> */5](read_string(ic, 4), (function (ret) {
-                                  return check(ret !== "WAVE", "Bad header: \"WAVE\" expected");
-                                })),
-                          find_chunk(ic, "fmt "),
-                          BsAsyncMonad.Callback[/* >> */5](read_int(ic), (function (ret) {
-                                  remaining_fmt_len[0] = (ret + ret % 2 | 0) - 16 | 0;
-                                  return check(!List.mem(ret, /* :: */[
-                                                  16,
-                                                  /* :: */[
-                                                    18,
-                                                    /* :: */[
-                                                      40,
-                                                      /* [] */0
-                                                    ]
-                                                  ]
-                                                ]), "Bad header: invalid \"fmt \" length");
-                                })),
-                          BsAsyncMonad.Callback[/* >> */5](read_short(ic), (function (code) {
-                                  format_code[0] = code;
-                                  return check(!List.mem(code, /* :: */[
-                                                  1,
-                                                  /* :: */[
-                                                    3,
-                                                    /* :: */[
-                                                      6,
-                                                      /* :: */[
-                                                        7,
-                                                        /* :: */[
-                                                          65534,
-                                                          /* [] */0
-                                                        ]
-                                                      ]
-                                                    ]
-                                                  ]
-                                                ]), "Bad header: unhandled codec");
-                                })),
-                          BsAsyncMonad.Callback[/* >> */5](read_short(ic), (function (ret) {
-                                  chan_num[0] = ret;
-                                  var partial_arg = BsAsyncMonad.Callback[/* return */2];
-                                  return (function (param) {
-                                      return partial_arg(/* () */0, param);
-                                    });
-                                })),
-                          BsAsyncMonad.Callback[/* >> */5](read_int(ic), (function (ret) {
-                                  samp_hz[0] = ret;
-                                  var partial_arg = BsAsyncMonad.Callback[/* return */2];
-                                  return (function (param) {
-                                      return partial_arg(/* () */0, param);
-                                    });
-                                })),
-                          BsAsyncMonad.Callback[/* >> */5](read_int(ic), (function (ret) {
-                                  byt_per_sec[0] = ret;
-                                  var partial_arg = BsAsyncMonad.Callback[/* return */2];
-                                  return (function (param) {
-                                      return partial_arg(/* () */0, param);
-                                    });
-                                })),
-                          BsAsyncMonad.Callback[/* >> */5](read_short(ic), (function (ret) {
-                                  byt_per_samp[0] = ret;
-                                  var partial_arg = BsAsyncMonad.Callback[/* return */2];
-                                  return (function (param) {
-                                      return partial_arg(/* () */0, param);
-                                    });
-                                })),
-                          BsAsyncMonad.Callback[/* >> */5](read_short(ic), (function (ret) {
-                                  bit_per_samp[0] = ret;
-                                  var partial_arg = BsAsyncMonad.Callback[/* return */2];
-                                  return (function (param) {
-                                      return partial_arg(/* () */0, param);
-                                    });
-                                })),
-                          tmp,
-                          find_chunk(ic, "data")
-                        ]), (function () {
-                        return BsAsyncMonad.Callback[/* >> */5](read_int(ic), (function (length) {
-                                      var header = {
-                                        channels: chan_num[0],
-                                        format_code: format_code[0],
-                                        sample_rate: samp_hz[0],
-                                        bytes_per_second: byt_per_sec[0],
-                                        bytes_per_sample: byt_per_samp[0],
-                                        bits_per_sample: bit_per_samp[0]
-                                      };
-                                      var partial_arg = {
-                                        header: header,
-                                        data_offset: ic.offset,
-                                        duration: length / byt_per_sec[0]
-                                      };
-                                      var partial_arg$1 = BsAsyncMonad.Callback[/* return */2];
-                                      return (function (param) {
-                                          return partial_arg$1(partial_arg, param);
-                                        });
-                                    }));
-                      }));
-                return BsAsyncMonad.Callback[/* &> */11]($$process, (function () {
+                return BsAsyncMonad.Callback[/* &> */11](read(fd), (function () {
                               return (function (param) {
                                   return Fs$LidcoreBsNode.close(fd, param);
                                 });
@@ -484,6 +468,6 @@ exports.format_codeToJs = format_codeToJs;
 exports.format_codeFromJs = format_codeFromJs;
 exports.Not_a_wav_file = Not_a_wav_file;
 exports.Not_supported = Not_supported;
-exports.read = read;
+exports.read = read$1;
 exports.write = write;
 /* buf Not a pure module */
