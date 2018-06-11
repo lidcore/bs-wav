@@ -1,20 +1,29 @@
 open BsAsyncMonad.Callback
 open LidcoreBsNode
 
-type header = <
+type format_code =
+  | PCM         [@bs.as 0x0001] 
+  | IEEE_FLOAT  [@bs.as 0x0003]
+  | ALAW        [@bs.as 0x0006]
+  | MULAW       [@bs.as 0x0007]
+  | EXTENSIBLE  [@bs.as 0xFFFE]
+[@@bs.deriving jsConverter]
+
+type wav_header = {
   channels         : int; (* 1 = mono ; 2 = stereo *)
+  format_code      : int;
   sample_rate      : int; (* in Hz *)
   bytes_per_second : int;
   bytes_per_sample : int; (* 1=8 bit Mono, 2=8 bit Stereo *)
                           (* or 16 bit Mono, 4=16 bit Stereo *)
   bits_per_sample  : int;
-> Js.t
+} [@@bs.deriving abstract]
 
-type t = <
-  header      : header;
+type t = {
+  header      : wav_header;
   data_offset : int;
   duration    : float
-> Js.t
+} [@@bs.deriving abstract]
 
 type input = {
   fd: int;
@@ -22,6 +31,7 @@ type input = {
 } [@@bs.deriving abstract]
 
 exception Not_a_wav_file of string
+exception Not_supported
 
 let buf = Buffer.from " "
 
@@ -58,87 +68,100 @@ let read_string ic n =
     offsetSet ic (offset ic + (int_of_float ret));
     return (Buffer.toString buf)
 
+let find_chunk ic id =
+  read_string ic 4 >> fun ret ->
+    let chunk_header = ref ret in
+    repeat (fun () -> return (!chunk_header <> id))
+           (fun () ->
+             read_int ic >> fun len ->
+               (* Official RIFF specifications: if chunk size is odd
+                * it is padded with an extra byte. *)
+               let len =
+                 len + (len mod 2)
+               in
+               discard (read_string ic len) >> fun () ->
+                 read_string ic 4 >> fun ret ->
+                 chunk_header := ret;
+                 return ())
+
+
 let read path =
   let check condition reason =
-    if condition then
+    if not condition then
       return ()
     else
       fail (Not_a_wav_file reason)
   in
-  let fmt_len      = ref (-1) in
-  let chan_num     = ref (-1) in
-  let samp_hz      = ref (-1) in
-  let byt_per_sec  = ref (-1) in
-  let byt_per_samp = ref (-1) in
-  let bit_per_samp = ref (-1) in
+  let remaining_fmt_len = ref (-1) in
+  let format_code       = ref (-1) in
+  let chan_num          = ref (-1) in
+  let samp_hz           = ref (-1) in
+  let byt_per_sec       = ref (-1) in
+  let byt_per_samp      = ref (-1) in
+  let bit_per_samp      = ref (-1) in
   Fs.openFile path "r" >> fun fd ->
-    let ic = input ~fd ~offset:0 in
-    seqa [|
-      read_string ic 4 >> (fun ret ->
-        check (ret = "RIFF") "Bad header: \"RIFF\" expected");
+    let process =
+      let ic = input ~fd ~offset:0 in
+      seqa [|
+        read_string ic 4 >> (fun ret ->
+          check (ret <> "RIFF") "Bad header: \"RIFF\" expected");
 
-      discard(read_int ic);
+        discard(read_int ic);
 
-      read_string ic 4 >> (fun ret ->
-        check (ret = "WAVE") "Bad header: \"WAVE\" expected");
+        read_string ic 4 >> (fun ret ->
+          check (ret <> "WAVE") "Bad header: \"WAVE\" expected");
 
-      read_string ic 4 >> (fun ret ->
-        check (ret = "fmt ") "Bad header: \"fmt \" expected");
+        find_chunk ic "fmt ";
 
-      read_int ic >> (fun ret ->
-        fmt_len := ret;
-        check (ret >= 0x10) "Bad header: invalid \"fmt \" length");
+        read_int ic >> (fun ret ->
+          (* This is what will be remaining after reading what we need. *)
+          remaining_fmt_len := ret + (ret mod 2) - 0x10; 
+          check (not (List.mem ret [16;18;40])) "Bad header: invalid \"fmt \" length");
 
-      read_short ic >> (fun ret ->
-        check (ret = 1) "Bad header: unhandled codec");
+        read_short ic >> (fun code ->
+          format_code := code;
+          check (not (List.mem code [0x1;0x3;0x6;0x7;0xFFFE])) "Bad header: unhandled codec");
 
-      read_short ic >> (fun ret ->
-        chan_num := ret; return ());
+        read_short ic >> (fun ret ->
+          chan_num := ret; return ());
 
-      read_int ic >> (fun ret ->
-        samp_hz := ret; return ());
+        read_int ic >> (fun ret ->
+          samp_hz := ret; return ());
 
-      read_int ic >> (fun ret ->
-        byt_per_sec := ret; return ());
+        read_int ic >> (fun ret ->
+          byt_per_sec := ret; return ());
 
-      read_short ic >> (fun ret ->
-        byt_per_samp := ret; return ());
+        read_short ic >> (fun ret ->
+          byt_per_samp := ret; return ());
 
-      read_short ic >> (fun ret ->
-        bit_per_samp := ret; return ());
+        read_short ic >> (fun ret ->
+          bit_per_samp := ret; return ());
 
-      (* The fmt header can be padded *)
-      if !fmt_len > 0x10 then 
-        discard(read_float_num_bytes ic (!fmt_len - 0x10))
-      else
-        return ();
+        (* Skip remaining data. *)
+        if !remaining_fmt_len > 0 then
+          discard(read_float_num_bytes ic !remaining_fmt_len)
+        else
+          return ();
 
-      read_string ic 4 >> fun ret ->
-        let header = ref ret in
-        (* Skip unhandled chunks. *)
-        repeat (fun () -> return (!header <> "data"))
-               (fun () ->
-                 read_int ic >> fun len ->
-                   discard (read_string ic len) >> fun () ->
-                     read_string ic 4 >> fun ret ->
-                     header := ret;
-                     return ());
-                   
-    |] >> fun () ->
-      read_int ic >> fun length ->
-        Fs.close fd >> fun () ->
-          let header = [%bs.obj{
-            channels         = !chan_num;
-            sample_rate      = !samp_hz;
-            bytes_per_second = !byt_per_sec;
-            bytes_per_sample = !byt_per_samp;
-            bits_per_sample  = !bit_per_samp;
-          }] in
-          return [%bs.obj{
-            header      = header;
-            data_offset = offset ic;
-            duration    = (float length) /. (float !byt_per_sec)
-          }]
+        find_chunk ic "data";
+
+      |] >> fun () ->
+        read_int ic >> fun length ->
+          let header = wav_header
+            ~channels:!chan_num
+            ~format_code:!format_code
+            ~sample_rate:!samp_hz
+            ~bytes_per_second:!byt_per_sec
+            ~bytes_per_sample:!byt_per_samp
+            ~bits_per_sample:!bit_per_samp
+          in
+          return (t
+            ~header:header
+            ~data_offset:(offset ic)
+            ~duration:((float length) /. (float !byt_per_sec)))
+    in
+    process &> fun () ->
+      Fs.close fd
 
 let short_string i =
   let up = i/256 in
@@ -187,13 +210,18 @@ let write ~header ~data path =
       write (`String "WAVE");
       write (`String "fmt ");
       write (int_string 16);
-      write (short_string 1);
-      write (short_string header##channels);
-      write (int_string header##sample_rate);
-      write (int_string header##bytes_per_second);
-      write (short_string header##bytes_per_sample);
-      write (short_string header##bits_per_sample);
+      write (short_string (header|.format_code));
+      write (short_string (header|.channels));
+      write (int_string (header|.sample_rate));
+      write (int_string (header|.bytes_per_second));
+      write (short_string (header|.bytes_per_sample));
+      write (short_string (header|.bits_per_sample));
       write (`String "data");
       write (int_string dlen);
       write (`Buffer data)
     |] &> fun () -> Fs.close fd
+
+let write ~header ~data path =
+  match format_codeFromJs (header|.format_code) with
+    | Some PCM -> write ~header ~data path
+    | _ -> fail Not_supported

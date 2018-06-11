@@ -4,7 +4,7 @@ external argv : string array = "" [@@bs.val] [@@bs.scope "process"]
 
 external exit : int -> 'a = "" [@@bs.val] [@@bs.scope "process"]
 
-external stringify : 'a Js.t -> unit Js.Nullable.t -> int -> string = "" [@@bs.val] [@@bs.scope "JSON"]
+external stringify : 'a -> unit Js.Nullable.t -> int -> string = "" [@@bs.val] [@@bs.scope "JSON"]
 
 let () =
  let path =

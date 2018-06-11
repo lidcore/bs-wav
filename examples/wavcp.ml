@@ -30,9 +30,9 @@ let () =
     exit 1
  in
  finish (Wav.read input >> fun wav ->
-   let header = wav##header in
+   let header = wav|.Wav.header in
    let position =
-     float wav##data_offset
+     float (wav|.Wav.data_offset)
    in
    readFile ~position input >> fun data ->
      Wav.write ~header ~data output)
