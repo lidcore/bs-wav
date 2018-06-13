@@ -2,11 +2,11 @@ open BsAsyncMonad
 open LidcoreBsNode
 
 type format_code =
-  | PCM         [@bs.as 0x0001]
-  | IEEE_FLOAT  [@bs.as 0x0003]
-  | ALAW        [@bs.as 0x0006]
-  | MULAW       [@bs.as 0x0007]
-  | EXTENSIBLE  [@bs.as 0xFFFE]
+  | PCM
+  | IEEE_FLOAT
+  | ALAW
+  | MULAW
+  | EXTENSIBLE
 [@@bs.deriving jsConverter]
 
 type wav_header = {
