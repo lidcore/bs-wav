@@ -9,11 +9,12 @@ let usage = "Usage: wavinfo /path/to/input.wav /path/to/output.wav"
 
 let readFile ~position path =
   let stats = Fs.statSync path in
+  let size = stats|.Fs.size in
   let length =
-    stats##size -. position
+    size -. position
   in
   let content =
-    Buffer.alloc stats##size
+    Buffer.alloc size
   in
   Fs.openFile path "r" >> fun fd ->
     (Fs.read ~position fd content >> fun (read,_) ->

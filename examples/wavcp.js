@@ -12,8 +12,9 @@ var usage = "Usage: wavinfo /path/to/input.wav /path/to/output.wav";
 
 function readFile(position, path) {
   var stats = Fs$LidcoreBsNode.statSync(path);
-  var length = stats.size - position;
-  var content = Buffer$LidcoreBsNode.alloc(stats.size);
+  var size = stats.size;
+  var length = size - position;
+  var content = Buffer$LidcoreBsNode.alloc(size);
   return BsAsyncMonad.Callback[/* >> */5]((function (param) {
                 return Fs$LidcoreBsNode.openFile(path, "r", param);
               }), (function (fd) {
@@ -26,7 +27,7 @@ function readFile(position, path) {
                                           Caml_builtin_exceptions.assert_failure,
                                           [
                                             "wavcp.ml",
-                                            20,
+                                            21,
                                             6
                                           ]
                                         ];
