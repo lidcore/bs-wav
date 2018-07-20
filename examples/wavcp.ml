@@ -9,7 +9,7 @@ let usage = "Usage: wavinfo /path/to/input.wav /path/to/output.wav"
 
 let readFile ~position path =
   let stats = Fs.statSync path in
-  let size = stats|.Fs.size in
+  let size = Fs.sizeGet stats in
   let length =
     size -. position
   in
@@ -31,9 +31,9 @@ let () =
     exit 1
  in
  finish (Wav.read input >> fun wav ->
-   let header = wav|.Wav.header in
+   let header = Wav.headerGet wav in
    let position =
-     float (wav|.Wav.data_offset)
+     float (Wav.data_offsetGet wav)
    in
    readFile ~position input >> fun data ->
      Wav.write ~header ~data output)

@@ -36,9 +36,9 @@ exception Not_supported
 let buf = Buffer.from " "
 
 let input_byte ic =
-  Fs.read (fd ic) buf >> fun (ret,buf) ->
+  Fs.read (fdGet ic) buf >> fun (ret,buf) ->
     assert (ret = 1.);
-    offsetSet ic (offset ic + 1); 
+    offsetSet ic (offsetGet ic + 1); 
     return (Buffer.get buf 0.)
 
 let read_float_num_bytes ic len =
@@ -63,9 +63,9 @@ let read_short ic =
 let read_string ic n =
   let n = float n in
   let buf = Buffer.alloc n in
-  Fs.read (fd ic) buf >> fun (ret,buf) ->
+  Fs.read (fdGet ic) buf >> fun (ret,buf) ->
     assert (ret = n);
-    offsetSet ic (offset ic + (int_of_float ret));
+    offsetSet ic (offsetGet ic + (int_of_float ret));
     return (Buffer.toString buf)
 
 let find_chunk ic id =
@@ -154,7 +154,7 @@ let read fd =
         ~bits_per_sample:!bit_per_samp
       in
       t ~header:header
-        ~data_offset:(offset ic)
+        ~data_offset:(offsetGet ic)
         ~duration:((float length) /. (float !byt_per_sec))
 
  let read path = 
@@ -209,18 +209,18 @@ let write ~header ~data path =
       write (`String "WAVE");
       write (`String "fmt ");
       write (int_string 16);
-      write (short_string (header|.format_code));
-      write (short_string (header|.channels));
-      write (int_string (header|.sample_rate));
-      write (int_string (header|.bytes_per_second));
-      write (short_string (header|.bytes_per_sample));
-      write (short_string (header|.bits_per_sample));
+      write (short_string (format_codeGet header));
+      write (short_string (channelsGet header));
+      write (int_string (sample_rateGet header));
+      write (int_string (bytes_per_secondGet header));
+      write (short_string (bytes_per_sampleGet header));
+      write (short_string (bits_per_sampleGet header));
       write (`String "data");
       write (int_string dlen);
       write (`Buffer data)
     |] &> fun () -> Fs.close fd
 
 let write ~header ~data path =
-  match format_codeFromJs (header|.format_code) with
+  match format_codeFromJs (format_codeGet header) with
     | Some PCM -> write ~header ~data path
     | _ -> fail Not_supported
